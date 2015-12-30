@@ -26,9 +26,10 @@ namespace VKMatcher.Frontend
             }
         }
 
-        public static string RequestHandler(HttpListenerRequest request)
+        public void RequestHandler(HttpListenerRequest request, HttpListenerResponse responce)
         {
-            return string.Format("<HTML><BODY><h1>VK Matcher </h1><br />Page genarated by c# mono.<br />{0}</BODY></HTML>", DateTime.Now);
+            responce.ResponseString(
+                string.Format("<HTML><BODY><h1>VK Matcher </h1><br />Page genarated by c# mono.<br />{0}</BODY></HTML>", DateTime.Now));
         }
     }
 }

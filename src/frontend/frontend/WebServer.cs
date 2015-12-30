@@ -11,9 +11,9 @@ namespace VKMatcher.Frontend
     public class WebServer
     {
         private readonly HttpListener _listener = new HttpListener();
-        private readonly Func<HttpListenerRequest, string> _responderMethod;
+        private readonly Action<HttpListenerRequest, HttpListenerResponse> _responderMethod;
 
-        public WebServer(string[] prefixes, Func<HttpListenerRequest, string> method)
+        public WebServer(string[] prefixes, Action<HttpListenerRequest, HttpListenerResponse> method)
         {
             if (!HttpListener.IsSupported)
                 throw new NotSupportedException(
@@ -35,7 +35,7 @@ namespace VKMatcher.Frontend
             _listener.Start();
         }
 
-        public WebServer(Func<HttpListenerRequest, string> method, params string[] prefixes)
+        public WebServer(Action<HttpListenerRequest, HttpListenerResponse> method, params string[] prefixes)
             : this(prefixes, method)
         { }
 
@@ -53,10 +53,7 @@ namespace VKMatcher.Frontend
                             var ctx = c as HttpListenerContext;
                             try
                             {
-                                string rstr = _responderMethod(ctx.Request);
-                                byte[] buf = Encoding.UTF8.GetBytes(rstr);
-                                ctx.Response.ContentLength64 = buf.Length;
-                                ctx.Response.OutputStream.Write(buf, 0, buf.Length);
+                                _responderMethod(ctx.Request, ctx.Response);
                             }
                             catch { } // suppress any exceptions
                             finally
