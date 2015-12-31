@@ -13,7 +13,7 @@ namespace VKMatcher.Frontend
 
         public FrontendServer()
         {
-            ws = new WebServer(RequestHandler, "http://localhost:9010/");
+            ws = new WebServer(RequestHandler, "http://*:9010/");
         }
 
         public void Run()
