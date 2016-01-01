@@ -1,1 +1,1 @@
-﻿body #login_button{background-color:#aaa;border:0;border-radius:10px;height:50px;width:1000px;}body #MainPanel{width:500px;margin:0 auto;text-align:center;}
+﻿body{font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;}body #login_button{color:#fff;font-size:20px;padding:15px 30px;text-decoration:none;background-color:#9ea3a9;border:0;border-radius:10px;transition:background 0s ease 0s,all .15s ease 0s,all 0s ease 0s;}body #login_button:hover{background:#6d8cb0 none repeat scroll 0% 0%;}body #MainPanel{width:500px;margin:0 auto;text-align:center;}

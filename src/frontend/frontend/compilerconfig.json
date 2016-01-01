@@ -1,9 +1,5 @@
 ﻿[
   {
-    "outputFile": "client/css/css.css",
-    "inputFile": "client/css/css.scss"
-  },
-  {
     "outputFile": "client/css/main_style.css",
     "inputFile": "client/css/main_style.scss"
   }
