@@ -56,9 +56,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="client\css\css.scss" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="client\css\" />
     <Folder Include="client\html\" />
   </ItemGroup>
   <ItemGroup>

@@ -11,18 +11,15 @@ namespace VKMatcher.Frontend.Controllers
     {
         public async Task Handle(HttpListenerRequest request, HttpListenerResponse responce)
         {
-            await Task.Run(() =>
+            var code = request.QueryString.Get("code");
+
+            if (code == null)
             {
-                var code = request.QueryString.Get("code");
+                await responce.ResponseErrorAsync(401);
+                return;
+            }
 
-                if (code == null)
-                {
-                    responce.ResponseError(401);
-                    return;
-                }
-
-
-            });
+            
         }
     }
 }
