@@ -1,9 +1,10 @@
 ﻿using System.Net;
+using System.Threading.Tasks;
 
 namespace VKMatcher.Frontend
 {
     interface IController
     {
-        void Handle(HttpListenerRequest request, HttpListenerResponse responce);
+        Task Handle(HttpListenerRequest request, HttpListenerResponse responce);
     }
 }

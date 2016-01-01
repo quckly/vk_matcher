@@ -15,5 +15,30 @@ namespace VKMatcher.Frontend
             response.ContentLength64 = buf.Length;
             response.OutputStream.Write(buf, 0, buf.Length);
         }
+
+        public static void ResponseError(this HttpListenerResponse response, int errorCode, string text = null)
+        {
+            response.StatusCode = errorCode;
+
+            byte[] buf = Encoding.UTF8.GetBytes($"Error {errorCode}<br />{(text == null ? string.Empty : text)}");
+            response.ContentLength64 = buf.Length;
+            response.OutputStream.Write(buf, 0, buf.Length);
+        }
+
+        public async static Task ResponseStringAsync(this HttpListenerResponse response, string text)
+        {
+            byte[] buf = Encoding.UTF8.GetBytes(text);
+            response.ContentLength64 = buf.Length;
+            await response.OutputStream.WriteAsync(buf, 0, buf.Length);
+        }
+
+        public async static Task ResponseErrorAsync(this HttpListenerResponse response, int errorCode, string text = null)
+        {
+            response.StatusCode = errorCode;
+
+            byte[] buf = Encoding.UTF8.GetBytes($"Error {errorCode}<br />{(text == null ? string.Empty : text)}");
+            response.ContentLength64 = buf.Length;
+            await response.OutputStream.WriteAsync(buf, 0, buf.Length);
+        }
     }
 }

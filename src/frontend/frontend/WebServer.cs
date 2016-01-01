@@ -11,9 +11,9 @@ namespace VKMatcher.Frontend
     public class WebServer
     {
         private readonly HttpListener _listener = new HttpListener();
-        private readonly Action<HttpListenerRequest, HttpListenerResponse> _responderMethod;
+        private readonly Func<HttpListenerRequest, HttpListenerResponse, Task> _responderMethod;
 
-        public WebServer(string[] prefixes, Action<HttpListenerRequest, HttpListenerResponse> method)
+        public WebServer(string[] prefixes, Func<HttpListenerRequest, HttpListenerResponse, Task> method)
         {
             if (!HttpListener.IsSupported)
                 throw new NotSupportedException(
@@ -35,7 +35,7 @@ namespace VKMatcher.Frontend
             _listener.Start();
         }
 
-        public WebServer(Action<HttpListenerRequest, HttpListenerResponse> method, params string[] prefixes)
+        public WebServer(Func<HttpListenerRequest, HttpListenerResponse, Task> method, params string[] prefixes)
             : this(prefixes, method)
         { }
 
@@ -48,12 +48,14 @@ namespace VKMatcher.Frontend
                 {
                     while (_listener.IsListening)
                     {
-                        ThreadPool.QueueUserWorkItem((c) =>
+                        _listener.GetContextAsync().ContinueWith(async (t) =>
                         {
-                            var ctx = c as HttpListenerContext;
+                            var ctx = await t;
+
                             try
                             {
-                                _responderMethod(ctx.Request, ctx.Response);
+                                await _responderMethod(ctx.Request, ctx.Response);
+                                return;
                             }
                             catch { } // suppress any exceptions
                             finally
@@ -61,7 +63,21 @@ namespace VKMatcher.Frontend
                                 // always close the stream
                                 ctx.Response.OutputStream.Close();
                             }
-                        }, _listener.GetContext());
+                        });
+                        //ThreadPool.QueueUserWorkItem((c) =>
+                        //{
+                        //    var ctx = c as HttpListenerContext;
+                        //    try
+                        //    {
+                        //        _responderMethod(ctx.Request, ctx.Response);
+                        //    }
+                        //    catch { } // suppress any exceptions
+                        //    finally
+                        //    {
+                        //        // always close the stream
+                        //        ctx.Response.OutputStream.Close();
+                        //    }
+                        //}, _listener.GetContext());
                     }
                 }
                 catch { } // suppress any exceptions

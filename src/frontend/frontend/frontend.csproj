@@ -44,6 +44,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controllers\FindMatchController.cs" />
+    <Compile Include="Controllers\PageNotFoundController.cs" />
+    <Compile Include="Controllers\VkCallbackController.cs" />
     <Compile Include="FrontendRouter.cs" />
     <Compile Include="FrontendServer.cs" />
     <Compile Include="IController.cs" />
@@ -55,7 +57,14 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="client\css\" />
+    <Folder Include="client\html\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="client\index.html" />
+    <Content Include="client\js\app.js" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -10,6 +10,7 @@ namespace VKMatcher.Frontend
     class FrontendServer
     {
         WebServer ws;
+        FrontendRouter router = new FrontendRouter();
 
         public FrontendServer()
         {
@@ -26,10 +27,13 @@ namespace VKMatcher.Frontend
             }
         }
 
-        public void RequestHandler(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task RequestHandler(HttpListenerRequest request, HttpListenerResponse responce)
         {
-            responce.ResponseString(
-                string.Format("<HTML><BODY><h1>VK Matcher </h1><br />Page genarated by c# mono.<br />{0}</BODY></HTML>", DateTime.Now));
+            responce.ContentType = "text/html";
+            await router.Handle(request, responce);
+
+            //responce.ResponseString(
+            //    string.Format("<HTML><BODY><h1>VK Matcher </h1><br />Page genarated by c# mono.<br />{0}</BODY></HTML>", DateTime.Now));
         }
     }
 }

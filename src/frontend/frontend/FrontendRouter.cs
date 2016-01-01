@@ -11,16 +11,40 @@ namespace VKMatcher.Frontend
 {
     class FrontendRouter
     {
+        public static IController notFoundController = new PageNotFoundController();
+
         public static Dictionary<string, IController> routeControllers = new Dictionary<string, IController>()
         {
-            { "POST:api/findmatch", new FindMatchController() }
+            // METHOD:URL_PATH_WITHOUT_SLASH_AT_END
+
+            { "POST:/api/findmatch", new FindMatchController() },
+            { "GET:/vk/callback", new VkCallbackController() },
         };
 
-        public void Handle(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task Handle(HttpListenerRequest request, HttpListenerResponse responce)
         {
-            string urlPath = request.Url.Fragment;
+            string urlPath = request.Url.AbsolutePath;
 
+            if (urlPath.Length <= 0)
+            {
+                throw new Exception("Wrong request.");
+            }
+
+            if (urlPath.Last() == '/')
+            {
+                urlPath = urlPath.Substring(0, urlPath.Length - 1);
+            }
+
+            // Find controller
             string controllerPath = request.HttpMethod + ":" + urlPath;
+
+            IController controller = null;
+            if (!routeControllers.TryGetValue(controllerPath, out controller))
+            {
+                controller = notFoundController;
+            }
+
+            await controller.Handle(request, responce);
         }
     }
 }
