@@ -5,6 +5,6 @@ namespace VKMatcher.Frontend
 {
     interface IController
     {
-        Task Handle(HttpListenerRequest request, HttpListenerResponse responce);
+        Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce);
     }
 }

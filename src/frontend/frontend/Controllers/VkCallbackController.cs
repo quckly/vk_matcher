@@ -9,7 +9,7 @@ namespace VKMatcher.Frontend.Controllers
 {
     class VkCallbackController : IController
     {
-        public async Task Handle(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
         {
             var code = request.QueryString.Get("code");
 

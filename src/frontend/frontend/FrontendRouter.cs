@@ -21,7 +21,7 @@ namespace VKMatcher.Frontend
             { "GET:/vk/callback", new VkCallbackController() },
         };
 
-        public async Task Handle(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
         {
             string urlPath = request.Url.AbsolutePath;
 
@@ -44,7 +44,7 @@ namespace VKMatcher.Frontend
                 controller = notFoundController;
             }
 
-            await controller.Handle(request, responce);
+            await controller.HandleAsync(request, responce);
         }
     }
 }

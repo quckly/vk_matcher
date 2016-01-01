@@ -30,7 +30,7 @@ namespace VKMatcher.Frontend
         public async Task RequestHandler(HttpListenerRequest request, HttpListenerResponse responce)
         {
             responce.ContentType = "text/html";
-            await router.Handle(request, responce);
+            await router.HandleAsync(request, responce);
 
             //responce.ResponseString(
             //    string.Format("<HTML><BODY><h1>VK Matcher </h1><br />Page genarated by c# mono.<br />{0}</BODY></HTML>", DateTime.Now));
