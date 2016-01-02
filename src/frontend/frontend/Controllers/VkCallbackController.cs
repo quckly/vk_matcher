@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
 
+using VKMatcher.Frontend.DBContext;
+
 namespace VKMatcher.Frontend.Controllers
 {
     class VkCallbackController : IController
@@ -45,6 +47,13 @@ namespace VKMatcher.Frontend.Controllers
             }
 
             // Access token successfully taken.
+            using (var command = DbConnection.SqlQuery("INSERT INTO task (uid, access_token) VALUES (@uid, @token)"))
+            {
+                command.Parameters.AddWithValue("@uid", Guid.NewGuid().ToString("N"));
+                command.Parameters.AddWithValue("@token", accessToken);
+                await command.ExecuteNonQueryAsync();
+            }
+
 
         }
     }

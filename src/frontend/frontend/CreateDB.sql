@@ -1,0 +1,8 @@
+﻿CREATE TABLE `task` (
+  `id` INTEGER NOT NULL AUTO_INCREMENT,
+  `uid` VARCHAR(64) NOT NULL,
+  `access_token` VARCHAR(64) NOT NULL,
+  `responce` MEDIUMTEXT NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+KEY (`uid`)
+);

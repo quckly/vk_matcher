@@ -12,7 +12,7 @@ namespace VKMatcher.Frontend.Controllers
         public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
         {
             responce.StatusCode = 404;
-            await responce.ResponseStringAsync("<h1>Not found!</h1><br /><h4>Error 404</h4>");
+            await responce.ResponseStringAsync("<h1>Not found!</h1><br /><h2>Error 404</h2>");
         }
     }
 }
