@@ -17,6 +17,8 @@ namespace VKMatcher.Frontend.Controllers
         public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
         {
             string accessToken = null;
+            uint userId = 0;
+
             var code = request.QueryString.Get("code");
 
             if (code == null)
@@ -35,30 +37,40 @@ namespace VKMatcher.Frontend.Controllers
                 var vkHttpResponce = await client.GetAsync(requestUrl);
                 var vkResponceString = await vkHttpResponce.Content.ReadAsStringAsync();
 
-                var vkResponce = JObject.Parse(vkResponceString);
+                try {
+                    dynamic vkResponce = JObject.Parse(vkResponceString);
 
-                JToken jTokenAccessToken;
-                if (!vkResponce.TryGetValue("access_token", out jTokenAccessToken))
-                {
+                    userId = vkResponce.user_id;
+                    accessToken = vkResponce.access_token;
+
+                    //JToken jTokenAccessToken;
+                    //if (!vkResponce.TryGetValue("access_token", out jTokenAccessToken))
+                    //{
+                    //    await responce.ResponseErrorAsync(403);
+                    //    return;
+                    //}
+
+                    //accessToken = jTokenAccessToken.Value<string>();
+                }
+                catch {
                     await responce.ResponseErrorAsync(403);
                     return;
                 }
-
-                accessToken = jTokenAccessToken.Value<string>();
             }
 
             // Access token successfully taken.
-            string taskID = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+            string taskId = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 
-            using (var command = DbConnection.SqlQuery("INSERT INTO task (uid, access_token) VALUES (@uid, @token)"))
+            using (var command = DbConnection.SqlQuery("INSERT INTO task (uid, user_id, access_token) VALUES (@uid, @user_id, @token)"))
             {
-                command.Parameters.AddWithValue("@uid", taskID);
+                command.Parameters.AddWithValue("@uid", taskId);
+                command.Parameters.AddWithValue("@user_id", userId);
                 command.Parameters.AddWithValue("@token", accessToken);
                 await command.ExecuteNonQueryAsync();
             }
 
             // Return taskID to client
-            responce.ResponseRedirect("https://vk.quckly.ru/#proccess/" + taskID);
+            responce.ResponseRedirect("https://vk.quckly.ru/#proccess/" + taskId);
         }
     }
 }
