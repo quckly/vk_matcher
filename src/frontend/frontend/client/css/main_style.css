@@ -17,6 +17,7 @@
     margin: 0 auto;
     text-align: center; }
   body .title {
+    color: #2E8BCC;
     margin: 30px 10px 50px 10px; }
   body h1 {
     font-family: "Roboto Slab",Helvetica,Arial,sans-serif;
