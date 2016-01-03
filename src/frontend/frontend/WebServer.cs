@@ -57,7 +57,9 @@ namespace VKMatcher.Frontend
                                 await _responderMethod(ctx.Request, ctx.Response);
                                 return;
                             }
-                            catch { } // suppress any exceptions
+                            catch (Exception e) {
+                                ctx.Response.ResponseError(500, e.Message); // Remove me in Production
+                            } // suppress any exceptions
                             finally
                             {
                                 // always close the stream
