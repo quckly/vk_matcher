@@ -5,7 +5,7 @@ CREATE TABLE `task` (
   `access_token` varchar(128) NOT NULL,
   `time_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `responce` mediumtext,
-  `time_up` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `time_up` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `uid` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
