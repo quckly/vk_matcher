@@ -9,6 +9,12 @@ namespace VKMatcher.Frontend
 {
     static class ResponseExtension
     {
+        public static void ResponseRedirect(this HttpListenerResponse response, string url, int code = 301)
+        {
+            response.RedirectLocation = url;
+            response.StatusCode = code;
+        }
+
         public static void ResponseString(this HttpListenerResponse response, string text)
         {
             byte[] buf = Encoding.UTF8.GetBytes(text);

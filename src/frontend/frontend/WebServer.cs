@@ -41,14 +41,14 @@ namespace VKMatcher.Frontend
 
         public void Run()
         {
-            ThreadPool.QueueUserWorkItem((o) =>
+            ThreadPool.QueueUserWorkItem(async (o) =>
             {
                 Console.WriteLine("Webserver running...");
                 try
                 {
                     while (_listener.IsListening)
                     {
-                        _listener.GetContextAsync().ContinueWith(async (t) =>
+                        await _listener.GetContextAsync().ContinueWith(async (t) =>
                         {
                             var ctx = await t;
 

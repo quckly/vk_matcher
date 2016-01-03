@@ -17,7 +17,7 @@ namespace VKMatcher.Frontend
         {
             // METHOD:URL_PATH_WITHOUT_SLASH_AT_END
 
-            { "POST:/api/findmatch", new FindMatchController() },
+            { "POST:/api/result", new ResultController() },
             { "GET:/vk/callback", new VkCallbackController() },
         };
 

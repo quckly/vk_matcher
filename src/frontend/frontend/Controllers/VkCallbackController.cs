@@ -35,26 +35,30 @@ namespace VKMatcher.Frontend.Controllers
                 var vkHttpResponce = await client.GetAsync(requestUrl);
                 var vkResponceString = await vkHttpResponce.Content.ReadAsStringAsync();
 
-                dynamic vkResponce = JObject.Parse(vkResponceString);
+                var vkResponce = JObject.Parse(vkResponceString);
 
-                if (vkResponce.access_token == null)
+                JToken jTokenAccessToken;
+                if (!vkResponce.TryGetValue("access_token", out jTokenAccessToken))
                 {
                     await responce.ResponseErrorAsync(403);
                     return;
                 }
 
-                accessToken = vkResponce.access_token;
+                accessToken = jTokenAccessToken.Value<string>();
             }
 
             // Access token successfully taken.
+            string taskID = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+
             using (var command = DbConnection.SqlQuery("INSERT INTO task (uid, access_token) VALUES (@uid, @token)"))
             {
-                command.Parameters.AddWithValue("@uid", Guid.NewGuid().ToString("N"));
+                command.Parameters.AddWithValue("@uid", taskID);
                 command.Parameters.AddWithValue("@token", accessToken);
                 await command.ExecuteNonQueryAsync();
             }
 
-
+            // Return taskID to client
+            responce.ResponseRedirect("https://vk.quckly.ru/#proccess/" + taskID);
         }
     }
 }

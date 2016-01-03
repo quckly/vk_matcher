@@ -67,7 +67,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controllers\FindMatchController.cs" />
+    <Compile Include="Controllers\ResultController.cs" />
     <Compile Include="Controllers\PageNotFoundController.cs" />
     <Compile Include="Controllers\VkCallbackController.cs" />
     <Compile Include="DBContext\DbConnection.cs" />
@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="client\html\" />
+    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="client\css\main_style.css">
@@ -100,6 +101,7 @@
     </Content>
     <Content Include="client\index.html" />
     <Content Include="client\js\app.js" />
+    <Content Include="CreateDB.sql" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">

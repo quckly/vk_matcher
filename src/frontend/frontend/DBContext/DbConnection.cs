@@ -34,7 +34,7 @@ namespace VKMatcher.Frontend.DBContext
         private DbConnection()
         {
             var mysqlCSB = new MySqlConnectionStringBuilder();
-            mysqlCSB.Server = "localhost";
+            mysqlCSB.Server = "quckly.ru";
             mysqlCSB.Database = "vk_matcher";
             mysqlCSB.UserID = "vk_matcher";
             mysqlCSB.Password = "4Q51uC8f4kx2U3Vr2XL2";
