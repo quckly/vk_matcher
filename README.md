@@ -1,2 +1,4 @@
-# vk_matcher
-Cursach
+VK Matcher
+=====================
+
+Deployed to: [vk.quckly.ru](https://vk.quckly.ru)
