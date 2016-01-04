@@ -21,7 +21,7 @@ namespace VKMatcher.Frontend
             { "GET:/vk/callback", new VkCallbackController() },
         };
 
-        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse response)
         {
             string urlPath = request.Url.AbsolutePath;
 
@@ -30,13 +30,25 @@ namespace VKMatcher.Frontend
                 throw new Exception("Wrong request.");
             }
 
+            string httpMethod = request.HttpMethod;
+
+            if (request.HttpMethod == "OPTIONS")
+            {
+                response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
+                response.AddHeader("Access-Control-Allow-Methods", "GET, POST");
+                response.AddHeader("Access-Control-Max-Age", "1728000");
+                response.AppendHeader("Access-Control-Allow-Origin", "*");
+
+                return;
+            }
+
             if (urlPath.Last() == '/')
             {
                 urlPath = urlPath.Substring(0, urlPath.Length - 1);
             }
 
             // Find controller
-            string controllerPath = request.HttpMethod + ":" + urlPath;
+            string controllerPath = httpMethod + ":" + urlPath;
 
             IController controller = null;
             if (!routeControllers.TryGetValue(controllerPath, out controller))
@@ -44,7 +56,7 @@ namespace VKMatcher.Frontend
                 controller = notFoundController;
             }
 
-            await controller.HandleAsync(request, responce);
+            await controller.HandleAsync(request, response);
         }
     }
 }
