@@ -50,6 +50,9 @@ namespace VKMatcher.Core
                 queryGetFreeTask = DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE response IS NULL LIMIT 1");
                 querySetResponse = DbConnection.SqlQuery(@"UPDATE task SET response = @response WHERE id = @id");
 
+                querySetResponse.Parameters.Add("@id", MySqlDbType.UInt32);
+                querySetResponse.Parameters.Add("@response", MySqlDbType.MediumText);
+
                 while (true)
                 {
                     using (var reader = queryGetFreeTask.ExecuteReader())
@@ -68,8 +71,8 @@ namespace VKMatcher.Core
                                 continue;
                             }
 
-                            querySetResponse.Parameters.AddWithValue("@id", id);
-                            querySetResponse.Parameters.AddWithValue("@response", response);
+                            querySetResponse.Parameters["@id"].Value = id;
+                            querySetResponse.Parameters["@response"].Value = response;
                             querySetResponse.ExecuteNonQuery();
                         }
                         else
