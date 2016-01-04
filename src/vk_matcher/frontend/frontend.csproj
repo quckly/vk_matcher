@@ -73,6 +73,7 @@
     <Compile Include="DBContext\DbConnection.cs" />
     <Compile Include="FrontendRouter.cs" />
     <Compile Include="FrontendServer.cs" />
+    <Compile Include="HttpHelpers.cs" />
     <Compile Include="IController.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -89,7 +90,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="client\html\" />
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
@@ -101,6 +101,24 @@
     </Content>
     <Content Include="client\index.html" />
     <Content Include="client\js\app.js" />
+    <Content Include="client\js\jquery-2.1.4.min.js" />
+    <Content Include="client\js\vkMatcherApp.es5.js">
+      <DependentUpon>vkMatcherApp.js</DependentUpon>
+    </Content>
+    <Content Include="client\js\vkMatcherApp.es5.min.js">
+      <DependentUpon>vkMatcherApp.es5.js</DependentUpon>
+    </Content>
+    <Content Include="client\js\vkMatcherApp.js" />
+    <Content Include="client\js\vkMatcherControllers.es5.js">
+      <DependentUpon>vkMatcherControllers.js</DependentUpon>
+    </Content>
+    <Content Include="client\js\vkMatcherControllers.es5.min.js">
+      <DependentUpon>vkMatcherControllers.es5.js</DependentUpon>
+    </Content>
+    <Content Include="client\js\vkMatcherControllers.js" />
+    <Content Include="client\page\gettoken.html" />
+    <Content Include="client\page\result.html" />
+    <Content Include="client\page\waitresult.html" />
     <Content Include="CreateDB.sql" />
   </ItemGroup>
   <ItemGroup>

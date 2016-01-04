@@ -58,7 +58,7 @@ namespace VKMatcher.Frontend
                                 return;
                             }
                             catch (Exception e) {
-                                ctx.Response.ResponseError(500, e.Message); // Remove me in Production
+                                await ctx.Response.ResponseErrorAsync(500, e.Message); // Remove me in Production
                             } // suppress any exceptions
                             finally
                             {

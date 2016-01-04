@@ -2,5 +2,13 @@
   {
     "outputFile": "client/css/main_style.css",
     "inputFile": "client/css/main_style.scss"
+  },
+  {
+    "outputFile": "client/js/vkMatcherApp.es5.js",
+    "inputFile": "client/js/vkMatcherApp.js"
+  },
+  {
+    "outputFile": "client/js/vkMatcherControllers.es5.js",
+    "inputFile": "client/js/vkMatcherControllers.js"
   }
 ]

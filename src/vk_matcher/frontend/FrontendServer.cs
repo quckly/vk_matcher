@@ -27,12 +27,12 @@ namespace VKMatcher.Frontend
             }
         }
 
-        public async Task RequestHandler(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task RequestHandler(HttpListenerRequest request, HttpListenerResponse response)
         {
-            responce.ContentType = "text/html";
-            await router.HandleAsync(request, responce);
+            response.ContentType = "text/html";
+            await router.HandleAsync(request, response);
 
-            //responce.ResponseString(
+            //response.ResponseString(
             //    string.Format("<HTML><BODY><h1>VK Matcher </h1><br />Page genarated by c# mono.<br />{0}</BODY></HTML>", DateTime.Now));
         }
     }

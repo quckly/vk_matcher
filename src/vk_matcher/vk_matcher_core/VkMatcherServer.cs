@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 using VkNet;
+using VkNet.Enums.Filters;
 using MySql.Data.MySqlClient;
 
 namespace VKMatcher.Core
@@ -32,7 +33,7 @@ namespace VKMatcher.Core
                 VkApi vkApi = new VkApi();
                 vkApi.Authorize(accessToken, userId);
 
-                return JsonConvert.SerializeObject(vkApi.Users.Get(userId));
+                return JsonConvert.SerializeObject(vkApi.Users.Get(userId, ProfileFields.All));
             }
             catch {
                 return null;
@@ -46,7 +47,7 @@ namespace VKMatcher.Core
             try
             {
                 Random rand = new Random();
-                queryGetFreeTask = DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE responce IS NULL LIMIT 1");
+                queryGetFreeTask = DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE response IS NULL LIMIT 1");
                 querySetResponse = DbConnection.SqlQuery(@"UPDATE task SET response = @response WHERE id = @id");
 
                 while (true)
