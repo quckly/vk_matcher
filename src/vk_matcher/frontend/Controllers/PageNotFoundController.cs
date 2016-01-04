@@ -9,10 +9,10 @@ namespace VKMatcher.Frontend.Controllers
 {
     class PageNotFoundController : IController
     {
-        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse response)
         {
-            responce.StatusCode = 404;
-            await responce.ResponseStringAsync("<h1>Not found!</h1><br /><h2>Error 404</h2>");
+            response.StatusCode = 404;
+            await response.ResponseStringAsync("<h1>Not found!</h1><br /><h2>Error 404</h2>");
         }
     }
 }

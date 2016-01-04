@@ -14,7 +14,7 @@ namespace VKMatcher.Frontend.Controllers
 {
     class VkCallbackController : IController
     {
-        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse responce)
+        public async Task HandleAsync(HttpListenerRequest request, HttpListenerResponse response)
         {
             string accessToken = null;
             uint userId = 0;
@@ -23,7 +23,7 @@ namespace VKMatcher.Frontend.Controllers
 
             if (code == null)
             {
-                await responce.ResponseErrorAsync(401);
+                await response.ResponseErrorAsync(401);
                 return;
             }
 
@@ -34,26 +34,26 @@ namespace VKMatcher.Frontend.Controllers
                                     @"&redirect_uri=https://vk.quckly.ru/vk/callback" +
                                     @"&code=" + code;
 
-                var vkHttpResponce = await client.GetAsync(requestUrl);
-                var vkResponceString = await vkHttpResponce.Content.ReadAsStringAsync();
+                var vkHttpResponse = await client.GetAsync(requestUrl);
+                var vkResponseString = await vkHttpResponse.Content.ReadAsStringAsync();
 
                 try {
-                    dynamic vkResponce = JObject.Parse(vkResponceString);
+                    dynamic vkResponse = JObject.Parse(vkResponseString);
 
-                    userId = vkResponce.user_id;
-                    accessToken = vkResponce.access_token;
+                    userId = vkResponse.user_id;
+                    accessToken = vkResponse.access_token;
 
                     //JToken jTokenAccessToken;
-                    //if (!vkResponce.TryGetValue("access_token", out jTokenAccessToken))
+                    //if (!vkResponse.TryGetValue("access_token", out jTokenAccessToken))
                     //{
-                    //    await responce.ResponseErrorAsync(403);
+                    //    await response.ResponseErrorAsync(403);
                     //    return;
                     //}
 
                     //accessToken = jTokenAccessToken.Value<string>();
                 }
                 catch {
-                    await responce.ResponseErrorAsync(403);
+                    await response.ResponseErrorAsync(403);
                     return;
                 }
             }
@@ -70,7 +70,7 @@ namespace VKMatcher.Frontend.Controllers
             }
 
             // Return taskID to client
-            responce.ResponseRedirect("https://vk.quckly.ru/#proccess/" + taskId);
+            response.ResponseRedirect("https://vk.quckly.ru/#/wait/" + taskId);
         }
     }
 }
