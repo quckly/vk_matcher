@@ -10,7 +10,7 @@ namespace VKMatcher.Core
     {
         static void Main(string[] args)
         {
-
+            new VkMatcherServer().Run();
         }
     }
 }
