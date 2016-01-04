@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Data;
 
 using MySql.Data.MySqlClient;
@@ -29,29 +30,49 @@ namespace VKMatcher.Core
         }
         #endregion
 
-        MySqlConnection connection;
+        MySqlConnectionStringBuilder mysqlCSB;
+        //MySqlConnection connection;
 
         private DbConnection()
         {
-            var mysqlCSB = new MySqlConnectionStringBuilder();
+            mysqlCSB = new MySqlConnectionStringBuilder();
             mysqlCSB.Server = "quckly.ru";
             mysqlCSB.Database = "vk_matcher";
             mysqlCSB.UserID = "vk_matcher";
             mysqlCSB.Password = "4Q51uC8f4kx2U3Vr2XL2";
+            mysqlCSB.CharacterSet = "utf8";
 
-            connection = new MySqlConnection(mysqlCSB.ConnectionString);
+            //connection = new MySqlConnection(mysqlCSB.ConnectionString);
+            //connection.Open();
+        }
+
+        public static MySqlConnection GetConnection()
+        {
+            var connection = new MySqlConnection(Instance.mysqlCSB.ConnectionString);
             connection.Open();
+            return connection;
+        }
+
+        public static async Task<MySqlConnection> GetConnectionAsync()
+        {
+            var connection = new MySqlConnection(Instance.mysqlCSB.ConnectionString);
+            await connection.OpenAsync();
+            return connection;
         }
 
         public static MySqlCommand SqlQuery(string query)
         {
-            MySqlCommand command = new MySqlCommand(query, Instance.connection);
+            //MySqlCommand command = new MySqlCommand(query, Instance.connection);
+            MySqlCommand command = new MySqlCommand(query, GetConnection());
+
             return command;
         }
 
         public static MySqlCommand SqlProc(string procedure_name)
         {
-            MySqlCommand command = new MySqlCommand(procedure_name, Instance.connection);
+            //MySqlCommand command = new MySqlCommand(procedure_name, Instance.connection);
+            MySqlCommand command = new MySqlCommand(procedure_name, GetConnection());
+
             command.CommandType = CommandType.StoredProcedure;
             return command;
         }
