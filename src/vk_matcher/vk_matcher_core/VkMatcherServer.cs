@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,15 +10,18 @@ using Newtonsoft.Json;
 using VkNet;
 using VkNet.Enums.Filters;
 using MySql.Data.MySqlClient;
+using QUtils;
 
 namespace VKMatcher.Core
 {
     public class VkMatcherServer
     {
         MultithreadingServer mts;
+        QLogger logger;
 
-        public VkMatcherServer()
+        public VkMatcherServer(QLogger logger)
         {
+            this.logger = logger;
             mts = new MultithreadingServer(DoWork);
         }
 
@@ -40,6 +44,21 @@ namespace VKMatcher.Core
             }
         }
 
+        private MySqlCommand getQueryGetFreeTask()
+        {
+            return DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE response IS NULL LIMIT 1");
+        }
+
+        private MySqlCommand getQuerySetResponse()
+        {
+            var querySetResponse =  DbConnection.SqlQuery(@"UPDATE task SET response = @response WHERE id = @id");
+
+            querySetResponse.Parameters.Add("@id", MySqlDbType.UInt32);
+            querySetResponse.Parameters.Add("@response", MySqlDbType.MediumText);
+
+            return querySetResponse;
+        }
+
         void DoWork()
         {
             MySqlCommand queryGetFreeTask = null, querySetResponse = null;
@@ -47,14 +66,16 @@ namespace VKMatcher.Core
             try
             {
                 Random rand = new Random();
-                queryGetFreeTask = DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE response IS NULL LIMIT 1");
-                querySetResponse = DbConnection.SqlQuery(@"UPDATE task SET response = @response WHERE id = @id");
-
-                querySetResponse.Parameters.Add("@id", MySqlDbType.UInt32);
-                querySetResponse.Parameters.Add("@response", MySqlDbType.MediumText);
+                queryGetFreeTask = getQueryGetFreeTask();
+                querySetResponse = getQuerySetResponse();
 
                 while (true)
                 {
+                    if (queryGetFreeTask.Connection.State != System.Data.ConnectionState.Open)
+                    {
+                        queryGetFreeTask = getQueryGetFreeTask();
+                    }
+
                     using (var reader = queryGetFreeTask.ExecuteReader())
                     {
                         if (reader.Read()) // if - because only one line in result, otherwise must use while
@@ -71,6 +92,11 @@ namespace VKMatcher.Core
                                 continue;
                             }
 
+                            if (querySetResponse.Connection.State != System.Data.ConnectionState.Open)
+                            {
+                                querySetResponse = getQuerySetResponse();
+                            }
+
                             querySetResponse.Parameters["@id"].Value = id;
                             querySetResponse.Parameters["@response"].Value = response;
                             querySetResponse.ExecuteNonQuery();
@@ -85,8 +111,7 @@ namespace VKMatcher.Core
             }
             catch (Exception e)
             {
-                // TODO:
-                // Log it
+                logger.Log(e.Message);
             }
             finally
             {
