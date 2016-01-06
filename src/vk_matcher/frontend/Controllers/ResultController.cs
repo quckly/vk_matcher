@@ -28,7 +28,7 @@ namespace VKMatcher.Frontend.Controllers
             {
                 await connection.OpenAsync();
 
-                using (MySqlCommand queryGetTask = DbConnection.SqlQuery(@"SELECT response FROM task WHERE uid = @uid AND responsed = 1 LIMIT 1", connection))
+                using (MySqlCommand queryGetTask = DbConnection.SqlQuery(@"SELECT response, responsed FROM task WHERE uid = @uid LIMIT 1", connection))
                 {
                     queryGetTask.Parameters.AddWithValue("@uid", req.taskId);
 
@@ -36,13 +36,22 @@ namespace VKMatcher.Frontend.Controllers
                     {
                         if (await reader.ReadAsync())
                         {
-                            string taskResponse = reader.GetString(0);
+                            bool isResponsed = reader.GetBoolean(1);
 
-                            await response.ResponseStringAsync(taskResponse);
+                            if (isResponsed)
+                            {
+                                string taskResponse = reader.GetString(0);
+
+                                await response.ResponseStringAsync(taskResponse);
+                            }
+                            else
+                            {
+                                response.StatusCode = 204;
+                            }
                         }
                         else
                         {
-                            response.StatusCode = 204;
+                            await response.ResponseJsonAsync(new { error = "Invalid task id." });
                         }
                     }
                 }

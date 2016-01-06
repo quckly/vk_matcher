@@ -49,9 +49,15 @@ namespace VKMatcher.Frontend
             await response.OutputStream.WriteAsync(buf, 0, buf.Length);
         }
 
-        public async static Task ResponseJson(this HttpListenerResponse response, object resposeObject, Formatting formatting = Formatting.Indented)
+        public async static Task ResponseJsonAsync(this HttpListenerResponse response, object resposeObject, Formatting formatting = Formatting.Indented)
         {
             string json = await Task.Run(() => JsonConvert.SerializeObject(resposeObject, formatting));
+            await response.ResponseJsonStringAsync(json);
+        }
+
+        public async static Task ResponseJsonStringAsync(this HttpListenerResponse response, string json)
+        {
+            response.ContentType = "application/json";
             await response.ResponseStringAsync(json);
         }
     }
