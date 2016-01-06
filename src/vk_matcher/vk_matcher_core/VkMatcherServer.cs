@@ -6,9 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Newtonsoft.Json;
-using VkNet;
-using VkNet.Enums.Filters;
 using MySql.Data.MySqlClient;
 using QUtils;
 
@@ -34,10 +31,8 @@ namespace VKMatcher.Core
         {
             try
             {
-                VkApi vkApi = new VkApi();
-                vkApi.Authorize(accessToken, userId);
-
-                return JsonConvert.SerializeObject(vkApi.Users.Get(userId, ProfileFields.All));
+                var matcher = new Matching(accessToken, userId);
+                return matcher.GetMatchingJsonResponse();
             }
             catch {
                 return null;
