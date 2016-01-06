@@ -22,7 +22,7 @@ namespace VKMatcher.Core
         public VkMatcherServer(QLogger logger)
         {
             this.logger = logger;
-            mts = new MultithreadingServer(DoWork);
+            mts = new MultithreadingServer(DoWork, 1);
         }
 
         public void Run()
@@ -46,12 +46,12 @@ namespace VKMatcher.Core
 
         private MySqlCommand getQueryGetFreeTask()
         {
-            return DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE response IS NULL LIMIT 1");
+            return DbConnection.SqlQuery(@"SELECT id, user_id, access_token FROM task WHERE responsed = 0 LIMIT 1", DbConnection.GetConnection());
         }
 
         private MySqlCommand getQuerySetResponse()
         {
-            var querySetResponse =  DbConnection.SqlQuery(@"UPDATE task SET response = @response WHERE id = @id");
+            var querySetResponse =  DbConnection.SqlQuery(@"UPDATE task SET response = @response, responsed = 1 WHERE id = @id", DbConnection.GetConnection());
 
             querySetResponse.Parameters.Add("@id", MySqlDbType.UInt32);
             querySetResponse.Parameters.Add("@response", MySqlDbType.MediumText);
@@ -67,13 +67,18 @@ namespace VKMatcher.Core
             {
                 Random rand = new Random();
                 queryGetFreeTask = getQueryGetFreeTask();
+                queryGetFreeTask.Connection.Open();
                 querySetResponse = getQuerySetResponse();
+                querySetResponse.Connection.Open();
+
+                int idleTime = 0;
 
                 while (true)
                 {
                     if (queryGetFreeTask.Connection.State != System.Data.ConnectionState.Open)
                     {
                         queryGetFreeTask = getQueryGetFreeTask();
+                        queryGetFreeTask.Connection.Open();
                     }
 
                     using (var reader = queryGetFreeTask.ExecuteReader())
@@ -95,16 +100,20 @@ namespace VKMatcher.Core
                             if (querySetResponse.Connection.State != System.Data.ConnectionState.Open)
                             {
                                 querySetResponse = getQuerySetResponse();
+                                querySetResponse.Connection.Open();
                             }
 
                             querySetResponse.Parameters["@id"].Value = id;
                             querySetResponse.Parameters["@response"].Value = response;
                             querySetResponse.ExecuteNonQuery();
+
+                            idleTime = 0;
                         }
                         else
                         {
                             // If no result in select don't spam a DB for nothing.
-                            Thread.Sleep(90 + rand.Next(20));
+                            idleTime = Math.Min(idleTime + 90, 2000);
+                            Thread.Sleep(idleTime + rand.Next(20));
                         }
                     }
                 }
@@ -118,11 +127,13 @@ namespace VKMatcher.Core
                 if (queryGetFreeTask != null)
                 {
                     queryGetFreeTask.Dispose();
+                    queryGetFreeTask.Connection.Dispose();
                 }
 
                 if (querySetResponse != null)
                 {
                     querySetResponse.Dispose();
+                    querySetResponse.Connection.Dispose();
                 }
             }
         }

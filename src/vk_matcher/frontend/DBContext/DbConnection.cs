@@ -49,29 +49,29 @@ namespace VKMatcher.Frontend.DBContext
         public static MySqlConnection GetConnection()
         {
             var connection = new MySqlConnection(Instance.mysqlCSB.ConnectionString);
-            connection.Open();
+            //connection.Open();
             return connection;
         }
 
-        public static async Task<MySqlConnection> GetConnectionAsync()
-        {
-            var connection = new MySqlConnection(Instance.mysqlCSB.ConnectionString);
-            await connection.OpenAsync();
-            return connection;
-        }
+        //public static async Task<MySqlConnection> GetConnectionAsync()
+        //{
+        //    var connection = new MySqlConnection(Instance.mysqlCSB.ConnectionString);
+        //    await connection.OpenAsync();
+        //    return connection;
+        //}
 
-        public static MySqlCommand SqlQuery(string query)
+        public static MySqlCommand SqlQuery(string query, MySqlConnection connection)
         {
             //MySqlCommand command = new MySqlCommand(query, Instance.connection);
-            MySqlCommand command = new MySqlCommand(query, GetConnection());
+            MySqlCommand command = new MySqlCommand(query, connection);
 
             return command;
         }
 
-        public static MySqlCommand SqlProc(string procedure_name)
+        public static MySqlCommand SqlProc(string procedure_name, MySqlConnection connection)
         {
             //MySqlCommand command = new MySqlCommand(procedure_name, Instance.connection);
-            MySqlCommand command = new MySqlCommand(procedure_name, GetConnection());
+            MySqlCommand command = new MySqlCommand(procedure_name, connection);
 
             command.CommandType = CommandType.StoredProcedure;
             return command;

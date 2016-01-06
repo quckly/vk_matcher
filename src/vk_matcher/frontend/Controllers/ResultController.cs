@@ -23,22 +23,27 @@ namespace VKMatcher.Frontend.Controllers
                 await response.ResponseErrorAsync(401);
                 return;
             }
-            
-            using (MySqlCommand queryGetTask = DbConnection.SqlQuery(@"SELECT response FROM task WHERE uid = @uid AND response IS NOT NULL LIMIT 1"))
+
+            using (var connection = DbConnection.GetConnection())
             {
-                queryGetTask.Parameters.AddWithValue("@uid", req.taskId);
+                await connection.OpenAsync();
 
-                using (var reader = await queryGetTask.ExecuteReaderAsync())
+                using (MySqlCommand queryGetTask = DbConnection.SqlQuery(@"SELECT response FROM task WHERE uid = @uid AND responsed = 1 LIMIT 1", connection))
                 {
-                    if (await reader.ReadAsync())
-                    {
-                        string taskResponse = reader.GetString(0);
+                    queryGetTask.Parameters.AddWithValue("@uid", req.taskId);
 
-                        await response.ResponseStringAsync(taskResponse);
-                    }
-                    else
+                    using (var reader = await queryGetTask.ExecuteReaderAsync())
                     {
-                        response.StatusCode = 204;
+                        if (await reader.ReadAsync())
+                        {
+                            string taskResponse = reader.GetString(0);
+
+                            await response.ResponseStringAsync(taskResponse);
+                        }
+                        else
+                        {
+                            response.StatusCode = 204;
+                        }
                     }
                 }
             }

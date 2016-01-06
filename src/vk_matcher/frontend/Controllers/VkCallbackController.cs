@@ -61,12 +61,19 @@ namespace VKMatcher.Frontend.Controllers
             // Access token successfully taken.
             string taskId = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 
-            using (var command = DbConnection.SqlQuery("INSERT INTO task (uid, user_id, access_token) VALUES (@uid, @user_id, @token)"))
+
+
+            using (var connection = DbConnection.GetConnection())
             {
-                command.Parameters.AddWithValue("@uid", taskId);
-                command.Parameters.AddWithValue("@user_id", userId);
-                command.Parameters.AddWithValue("@token", accessToken);
-                await command.ExecuteNonQueryAsync();
+                await connection.OpenAsync();
+
+                using (var command = DbConnection.SqlQuery("INSERT INTO task (uid, user_id, access_token) VALUES (@uid, @user_id, @token)", connection))
+                {
+                    command.Parameters.AddWithValue("@uid", taskId);
+                    command.Parameters.AddWithValue("@user_id", userId);
+                    command.Parameters.AddWithValue("@token", accessToken);
+                    await command.ExecuteNonQueryAsync();
+                }
             }
 
             // Return taskID to client
