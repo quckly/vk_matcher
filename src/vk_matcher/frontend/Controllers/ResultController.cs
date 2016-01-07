@@ -42,7 +42,7 @@ namespace VKMatcher.Frontend.Controllers
                             {
                                 string taskResponse = reader.GetString(0);
 
-                                await response.ResponseStringAsync(taskResponse);
+                                await response.ResponseJsonStringAsync(taskResponse);
                             }
                             else
                             {
