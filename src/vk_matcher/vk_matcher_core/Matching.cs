@@ -25,6 +25,11 @@ namespace Vk.Models
         // Addons
         public string photo_100;
     }
+
+    public class Group
+    {
+        public long id;
+    }
 }
 
 namespace VKMatcher.Core
@@ -33,6 +38,8 @@ namespace VKMatcher.Core
     {
         public User User { get; }
         public List<VkUser> Friends { get; set; }
+
+        public List<long> Subscriptions { get; set; }
         public List<long> Groups { get; set; }
 
         public VkUser(User user)
@@ -51,6 +58,18 @@ namespace VKMatcher.Core
     {
         public long userId;
         public VkApiGetGroupsExecuteGroupsList groups;
+    }
+
+    public class VkApiGetSubExecuteSubList
+    {
+        public long count;
+        public Vk.Models.Group[] items; // May be array of objects
+    }
+
+    public class VkApiGetSubExecuteUser
+    {
+        public long userId;
+        public VkApiGetSubExecuteSubList groups;
     }
 
     public class VkApiGetFriendExecuteFriendsList
@@ -86,7 +105,7 @@ namespace VKMatcher.Core
     class MatchedUser : IComparable<MatchedUser>
     {
         public VkUser User { get; }
-        public double Likely { get; }
+        public double Likely { get; set; }
         public List<long> MatchedGroups { get; }
 
         public MatchedUser(VkUser user, double likely, List<long> matchedGroups)
@@ -133,7 +152,7 @@ namespace VKMatcher.Core
             }
         }
 
-        string BuildGetGroupsRequest(IEnumerable<long> userIds, int count = 30)
+        string BuildGetGroupsRequest(IEnumerable<long> userIds, string getMethod, int count = 30, string addFields = null)
         {
             return string.Format(@"var users = [{0}];
             var result = [];
@@ -141,12 +160,12 @@ namespace VKMatcher.Core
             var i = 0;
             while (i < users.length)
             {{
-                result.push({{ userId: users[i], groups: API.groups.get({{ user_id: users[i], count: {1} }})}});
+                result.push({{ userId: users[i], groups: API.{2}({{ user_id: users[i], count: {1}{3} }})}});
 
                 i = i + 1;
             }}
 
-            return result;", String.Join(",", userIds.Select(x => x.ToString())), count);
+            return result;", String.Join(",", userIds.Select(x => x.ToString())), count, getMethod, (addFields != null ? addFields : ""));
         }
 
         string BuildGetFriendsRequest(IEnumerable<long> userIds)
@@ -157,7 +176,7 @@ namespace VKMatcher.Core
             var i = 0;
             while (i < users.length)
             {{
-                result.push({{ userId: users[i], friends: API.friends.get({{ user_id: users[i], fields: ""deactivated"" }})}});
+                result.push({{ userId: users[i], friends: API.friends.get({{ user_id: users[i], fields: ""deactivated,photo_100"" }})}});
 
                 i = i + 1;
             }}
@@ -196,22 +215,61 @@ namespace VKMatcher.Core
             }
         }
 
-        public void FillConsiderUsersGroups(List<VkUser> users)
+        public void FillConsiderUsersGroups(List<VkUser> users, string getMethod = "groups.get")
         {
             for (int i = 0; i < users.Count && i <= 5000; i += 25) // REMOVE ME
             {
-                string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), MaxConsiderGroups);
+                string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups);
 
                 string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
                 var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetGroupsExecuteUser[]>>(vkApiResponse).response;
 
-                foreach (var group in response)
+                if (getMethod == "groups.get") // Replace this
                 {
-                    considerUsers[group.userId].Groups = group.groups.items.ToList();
+                    foreach (var group in response)
+                    {
+                        considerUsers[group.userId].Groups = group.groups.items.ToList();
+                    }
+                }
+                else
+                {
+                    foreach (var group in response)
+                    {
+                        considerUsers[group.userId].Subscriptions = group.groups.items.ToList();
+                    }
                 }
 
                 // REMOVE ME
                 Console.WriteLine($"Done {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
+            }
+        }
+
+        public void FillConsiderUsersSubs(List<VkUser> users, string getMethod = "users.getSubscriptions")
+        {
+            for (int i = 0; i < users.Count && i <= 1000; i += 25) // REMOVE ME
+            {
+                string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups, ", extended: 1");
+
+                string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
+                var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetSubExecuteUser[]>>(vkApiResponse).response;
+
+                if (getMethod == "groups.get") // Replace this
+                {
+                    foreach (var group in response)
+                    {
+                        //considerUsers[group.userId].Groups = group.groups.items.ToList();
+                    }
+                }
+                else
+                {
+                    foreach (var group in response)
+                    {
+                        considerUsers[group.userId].Subscriptions = group.groups.items.Select(sub => sub.id).ToList();
+                    }
+                }
+
+                // REMOVE ME
+                Console.WriteLine($"Done(Subs) {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
             }
         }
 
@@ -220,61 +278,75 @@ namespace VKMatcher.Core
             return Math.Exp(linearGroupWeight * 2.4);
         }
 
-        public string GetMatchingJsonResponse()
+        List<MatchedUser> FillAndSortUsersBySubscription(List<MatchedUser> users)
         {
-            // First, get friends;
-            selfUser.Friends = vkApi.Friends.Get(selfUser.User.Id, ProfileFields.FirstName|ProfileFields.Photo100)
-                .Where(friend => friend.Deactivated == null)
-                .Select(friend => new VkUser(friend))
-                .ToList();
-            
-            Dictionary<long, VkUser> friendsDict = new Dictionary<long, VkUser>();
-            selfUser.Friends.ForEach(x => friendsDict.Add(x.User.Id, x));
-            
-            // Friends friends, by packet exec (25 friends in one packet)
-            for (int i = 0; i < selfUser.Friends.Count; i += 25)
-            {
-                string executeCode = BuildGetFriendsRequest(selfUser.Friends.Skip(i).Take(25).Select(user => user.User.Id));
-
-                string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
-                var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetFriendExecuteUser[]>>(vkApiResponse).response;
-                
-                foreach (var friend in response)
-                {
-                    friendsDict[friend.userId].Friends = friend.friends.items
-                        .Where(u => u.deactivated == null)
-                        .Select(u => new VkUser(new User() { Id = u.id, Photo100 = new Uri(u.photo_100) })).ToList();
-                }
-            }
-
-            // selfUser.Friends = friendsDict.Values.ToList(); // not have a sense
-            friendsDict = null;
-
-            // user.Friends has VkUser with list of friends.
-
-
-            // Collect unique users from all friends
-            foreach (var friend in selfUser.Friends)
-            {
-                AddUniqueUserToConsider(friend);
-
-                foreach (var ff in friend.Friends)
-                {
-                    AddUniqueUserToConsider(ff);
-                }
-            }
-
-            // Get necessary fields
-            var considerUsersList = considerUsers.Values.ToList();
-
-            // Fetch all groups
-            selfUser.Groups = vkApi.Groups.Get(selfUser.User.Id, false, null, null, 0, (uint)MaxConsiderGroups).Select(x => x.Id).ToList();
-
-            // Very long operation:
-            FillConsiderUsersGroups(considerUsersList);
+            FillConsiderUsersSubs(users.Select(u => u.User).ToList(), "users.getSubscriptions");
 
             // And sort all consider users.
 
+            // Group weight : linear function declared in [0,1]
+            // = 1 - groupIndex / MaxConsiderGroups;
+
+            // Group match cost: http://www.wolframalpha.com/input/?i=plot+%28%28e^%28%28x%29+*+2.4%29%29^%281.5%29+%29+from+0+to+1
+            // F: (e^((x) * 2.4)), x in [0,1]
+
+            Dictionary<long, MatchedGroup> selfGroupsIdx = new Dictionary<long, MatchedGroup>();
+
+            //System.Diagnostics.Debug.Assert(selfUser.Groups.Count <= MaxConsiderGroups);
+
+            for (int i = 0; i < selfUser.Subscriptions.Count && i < MaxConsiderGroups; i++)
+            {
+                long id = selfUser.Subscriptions[i];
+                double weight = GroupWeightMatchFactor(1.0 - ((double)i / (double)MaxConsiderGroups));
+
+                selfGroupsIdx.Add(id, new MatchedGroup(id, weight));
+            }
+
+            // Compare all users to self.
+            foreach (var matchingUser in users)
+            {
+                var groups = matchingUser.User.Subscriptions;
+
+                if (groups == null)
+                {
+                    continue;
+                }
+
+                //System.Diagnostics.Debug.Assert(groups.Count <= MaxConsiderGroups);
+
+                List<long> matchedByUserGroups = new List<long>();
+                double sumOfLikely = 0.0;
+
+                // Collect groups match likes
+                for (int i = 0; i < groups.Count && i < MaxConsiderGroups; i++)
+                {
+                    // If matchingUser group intersect self user group
+                    if (selfGroupsIdx.ContainsKey(groups[i]))
+                    {
+                        double groupWeight = GroupWeightMatchFactor(1.0 - ((double)i / (double)MaxConsiderGroups));
+
+                        double groupLikely = groupWeight * selfGroupsIdx[groups[i]].Weight;
+
+                        sumOfLikely += groupLikely;
+                        matchedByUserGroups.Add(groups[i]);
+                    }
+                }
+
+                matchingUser.Likely += sumOfLikely;
+                matchingUser.MatchedGroups.AddRange(matchedByUserGroups);
+            }
+
+            // Finally sort users, get top, and return result.
+            users.Sort();
+
+            return users;
+        }
+
+        List<MatchedUser> FillAndSortUsersByGroup(List<VkUser> users)
+        {
+            FillConsiderUsersGroups(users);
+
+            // And sort all consider users.
 
             // Group weight : linear function declared in [0,1]
             // = 1 - groupIndex / MaxConsiderGroups;
@@ -295,9 +367,9 @@ namespace VKMatcher.Core
             }
 
             // Compare all users to self.
-            List<MatchedUser> matchedUsers = new List<MatchedUser>(considerUsersList.Count);
+            List<MatchedUser> matchedUsers = new List<MatchedUser>(users.Count);
 
-            foreach (var matchingUser in considerUsersList)
+            foreach (var matchingUser in users)
             {
                 var groups = matchingUser.Groups;
 
@@ -332,6 +404,75 @@ namespace VKMatcher.Core
 
             // Finally sort users, get top, and return result.
             matchedUsers.Sort();
+
+            return matchedUsers;
+        }
+
+        public string GetMatchingJsonResponse()
+        {
+            // First, get friends;
+            selfUser.Friends = vkApi.Friends.Get(selfUser.User.Id, ProfileFields.FirstName|ProfileFields.Photo100)
+                .Where(friend => friend.Deactivated == null)
+                .Select(friend => new VkUser(friend))
+                .ToList();
+            
+            Dictionary<long, VkUser> friendsDict = new Dictionary<long, VkUser>();
+            selfUser.Friends.ForEach(x => friendsDict.Add(x.User.Id, x));
+            
+            // Friends friends, by packet exec (25 friends in one packet)
+            for (int i = 0; i < selfUser.Friends.Count; i += 25)
+            {
+                string executeCode = BuildGetFriendsRequest(selfUser.Friends.Skip(i).Take(25).Select(user => user.User.Id));
+
+                string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
+                var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetFriendExecuteUser[]>>(vkApiResponse).response;
+                
+                foreach (var friend in response)
+                {
+                    friendsDict[friend.userId].Friends = friend.friends.items
+                        .Where(u => u.deactivated == null)
+                        .Select(u => new VkUser(new User() { Id = u.id, Photo100 = (u.photo_100 != null ? new Uri(u.photo_100) : null) })).ToList();
+                }
+
+                Console.WriteLine($"Fetching users: {i}/{selfUser.Friends.Count}");
+            }
+
+            // user.Friends has VkUser with list of friends.
+
+
+            // Collect unique users from all friends
+            foreach (var friend in selfUser.Friends) // First add friends who have extented info
+            {
+                AddUniqueUserToConsider(friend);
+            }
+
+            foreach (var friend in selfUser.Friends) // Later fr-fr
+            {
+                foreach (var ff in friend.Friends)
+                {
+                    AddUniqueUserToConsider(ff);
+                }
+            }
+
+            // Get necessary fields
+            var considerUsersList = considerUsers.Values.ToList();
+
+            // Put friends first
+            considerUsersList = considerUsersList.AsParallel().OrderBy(u => friendsDict.ContainsKey(u.User.Id) ? 0 : 1).ToList();
+
+            // Fetch all groups
+            selfUser.Groups = vkApi.Groups.Get(selfUser.User.Id, false, null, null, 0, (uint)MaxConsiderGroups).Select(x => x.Id).ToList();
+            selfUser.Subscriptions = vkApi.Users.GetSubscriptions(selfUser.User.Id, (int?)MaxConsiderGroups, 0).Select(x => x.Id).ToList();
+
+            // Very long operations:
+            //List<MatchedUser> matchedUsers = considerUsersList
+            //    .Select(u => new MatchedUser(u, 0, new List<long>())).ToList();
+
+            var matchedUsers = ( from user in considerUsersList
+                     select new MatchedUser(user, 0, new List<long>()))
+                     .ToList();
+
+            matchedUsers = FillAndSortUsersBySubscription(matchedUsers);
 
             var resultUsers = matchedUsers.Take(20).Select(u => new { Likely = u.Likely, UserId = u.User.User.Id, Groups = u.MatchedGroups, Photo = u.User.User.Photo100 });
 
