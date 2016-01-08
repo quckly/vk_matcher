@@ -32,11 +32,10 @@ app.controller('ResultCtrl', ['$http', '$routeParams', function ($http, $routePa
 
     result.TaskId = $routeParams.taskId;
 
-    result.Result = '';
-
     $http.post('https://vk.quckly.ru/api/result', { 'taskId': result.TaskId }).then(function successCallback(response) {
         if (response.status == 200) {
-            result.Result = JSON.stringify(response.data, null, 2);
+            result.Result = response.data;
+            result.ResultJson = JSON.stringify(response.data, null, 2);
             result.Avatar = response.data.PhotoMaxOrig;
         }
     });
