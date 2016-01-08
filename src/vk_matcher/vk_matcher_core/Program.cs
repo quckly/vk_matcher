@@ -10,7 +10,7 @@ namespace VKMatcher.Core
     {
         static void Main(string[] args)
         {
-            using (var logger = new QUtils.QLogger(@"./logs.txt"))
+            using (var logger = new QUtils.QLogger(@"./logs-core.txt"))
             {
                 new VkMatcherServer(logger).Run();
             }
