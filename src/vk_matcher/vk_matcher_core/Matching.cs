@@ -125,6 +125,8 @@ namespace VKMatcher.Core
     {
         public readonly int MaxConsiderGroups = 30;
 
+        HttpClient client;
+
         VkApi vkApi;
         VkUser selfUser;
 
@@ -132,6 +134,8 @@ namespace VKMatcher.Core
 
         public Matching(string accessToken, uint userId)
         {
+            client = new HttpClient(new HttpClientHandler());
+
             vkApi = new VkApi();
             vkApi.Authorize(accessToken, userId);
 
@@ -184,7 +188,7 @@ namespace VKMatcher.Core
             return result;", String.Join(",", userIds.Select(x => x.ToString())));
         }
 
-        public string ExecuteVkApiMethod(string methodName, IDictionary<string, string> parameters, string accessToken = null)
+        public async Task<string> ExecuteVkApiMethodAsync(string methodName, IDictionary<string, string> parameters, string accessToken = null)
         {
             string url = $"https://api.vk.com/method/{methodName}";
 
@@ -195,81 +199,107 @@ namespace VKMatcher.Core
                 parameters.Add("access_token", accessToken);
             }
 
-            using (HttpClient client = new HttpClient())
+            HttpResponseMessage response = null;
+
+            int countOfError = 10;
+            while (response == null && countOfError-- > 0)
             {
-                HttpResponseMessage response = null;
-
-                int countOfError = 10;
-                while (response == null && countOfError-- > 0)
+                try
                 {
-                    try
-                    {
-                        var responseTask = client.PostAsync(url, new FormUrlEncodedContent(parameters));
-                        responseTask.Wait();
-                        response = responseTask.Result;
-                    }
-                    catch { }
+                    var responseTask = client.PostAsync(url, new FormUrlEncodedContent(parameters));
+                    response = await responseTask;
                 }
-
-                return response.Content.ReadAsStringAsync().Result;
+                catch { }
             }
+
+            return await response.Content.ReadAsStringAsync();
         }
 
         public void FillConsiderUsersGroups(List<VkUser> users, string getMethod = "groups.get")
         {
-            for (int i = 0; i < users.Count && i <= 5000; i += 25) // REMOVE ME
+            int freeTasks = 2;
+            HashSet<Task<string>> tasks = new HashSet<Task<string>>();
+
+            for (int i = 0; tasks.Count > 0 || (i < users.Count && i <= 5000); ) // REMOVE ME
             {
-                string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups);
+                if (freeTasks > 0 && (i < users.Count && i <= 5000)) {
+                    string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups);
 
-                string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
-                var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetGroupsExecuteUser[]>>(vkApiResponse).response;
+                    var newTask = ExecuteVkApiMethodAsync("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
 
-                if (getMethod == "groups.get") // Replace this
-                {
-                    foreach (var group in response)
-                    {
-                        considerUsers[group.userId].Groups = group.groups.items.ToList();
-                    }
+                    tasks.Add(newTask);
+                    freeTasks--;
+
+                    i += 25;
                 }
-                else
-                {
-                    foreach (var group in response)
-                    {
-                        considerUsers[group.userId].Subscriptions = group.groups.items.ToList();
-                    }
-                }
+                else {
+                    var completedTask = Task.WhenAny(tasks.ToArray()).Result;
 
-                // REMOVE ME
-                Console.WriteLine($"Done {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
+                    tasks.Remove(completedTask);
+                    freeTasks++;
+
+                    string vkApiResponse = completedTask.Result;
+                    var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetGroupsExecuteUser[]>>(vkApiResponse).response;
+
+                    if (getMethod == "groups.get") // Replace this
+                    {
+                        foreach (var group in response)
+                        {
+                            considerUsers[group.userId].Groups = group.groups.items.ToList();
+                        }
+                    }
+                    else
+                    {
+                        foreach (var group in response)
+                        {
+                            considerUsers[group.userId].Subscriptions = group.groups.items.ToList();
+                        }
+                    }
+
+                    // REMOVE ME
+                    Console.WriteLine($"Done {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
+                }
             }
         }
 
         public void FillConsiderUsersSubs(List<VkUser> users, string getMethod = "users.getSubscriptions")
         {
-            for (int i = 0; i < users.Count && i <= 1000; i += 25) // REMOVE ME
+            int maximumHandleUsers = 3000;
+
+            int freeTasks = 2;
+            HashSet<Task<string>> tasks = new HashSet<Task<string>>();
+
+            for (int i = 0; tasks.Count > 0 || (i < users.Count && i <= maximumHandleUsers);) // REMOVE ME
             {
-                string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups, ", extended: 1");
-
-                string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
-                var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetSubExecuteUser[]>>(vkApiResponse).response;
-
-                if (getMethod == "groups.get") // Replace this
+                if (freeTasks > 0 && (i < users.Count && i <= maximumHandleUsers))
                 {
-                    foreach (var group in response)
-                    {
-                        //considerUsers[group.userId].Groups = group.groups.items.ToList();
-                    }
+                    string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups, ", extended: 1");
+
+                    var newTask = ExecuteVkApiMethodAsync("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
+
+                    tasks.Add(newTask);
+                    freeTasks--;
+
+                    i += 25;
                 }
                 else
                 {
+                    var completedTask = Task.WhenAny(tasks.ToArray()).Result;
+
+                    tasks.Remove(completedTask);
+                    freeTasks++;
+
+                    string vkApiResponse = completedTask.Result;
+                    var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetSubExecuteUser[]>>(vkApiResponse).response;
+
                     foreach (var group in response)
                     {
                         considerUsers[group.userId].Subscriptions = group.groups.items.Select(sub => sub.id).ToList();
                     }
-                }
 
-                // REMOVE ME
-                Console.WriteLine($"Done(Subs) {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
+                    // REMOVE ME
+                    Console.WriteLine($"Done(Subs) {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
+                }
             }
         }
 
@@ -410,6 +440,8 @@ namespace VKMatcher.Core
 
         public string GetMatchingJsonResponse()
         {
+            Console.WriteLine($"Start matching ID({selfUser.User.Id})");
+
             // First, get friends;
             selfUser.Friends = vkApi.Friends.Get(selfUser.User.Id, ProfileFields.FirstName|ProfileFields.Photo100)
                 .Where(friend => friend.Deactivated == null)
@@ -424,7 +456,7 @@ namespace VKMatcher.Core
             {
                 string executeCode = BuildGetFriendsRequest(selfUser.Friends.Skip(i).Take(25).Select(user => user.User.Id));
 
-                string vkApiResponse = ExecuteVkApiMethod("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
+                string vkApiResponse = ExecuteVkApiMethodAsync("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken).Result;
                 var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetFriendExecuteUser[]>>(vkApiResponse).response;
                 
                 foreach (var friend in response)
