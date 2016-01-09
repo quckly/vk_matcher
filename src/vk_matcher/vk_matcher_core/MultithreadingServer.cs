@@ -29,7 +29,7 @@ namespace VKMatcher.Core
             // Create muiltithreading
             Enumerable.Range(0, ThreadCount).All(_ =>
             {
-                var task = Task.Factory.StartNew(() =>
+                var task = Task.Run(() =>
                 {
                     WorkerAction();
                 });

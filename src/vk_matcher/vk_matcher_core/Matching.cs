@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -7,9 +8,12 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using VkNet;
 using VkNet.Model;
 using VkNet.Enums.Filters;
+
+using VKMatcher.Models;
 
 namespace Vk.Models
 {
@@ -36,7 +40,7 @@ namespace VKMatcher.Core
 {
     public class VkUser
     {
-        public User User { get; }
+        public User User { get; set; }
         public List<VkUser> Friends { get; set; }
 
         public List<long> Subscriptions { get; set; }
@@ -180,7 +184,7 @@ namespace VKMatcher.Core
             var i = 0;
             while (i < users.length)
             {{
-                result.push({{ userId: users[i], friends: API.friends.get({{ user_id: users[i], fields: ""deactivated,photo_100"" }})}});
+                result.push({{ userId: users[i], friends: API.friends.get({{ user_id: users[i], fields: ""deactivated"" }})}});
 
                 i = i + 1;
             }}
@@ -266,39 +270,88 @@ namespace VKMatcher.Core
         {
             int maximumHandleUsers = 3000;
 
-            int freeTasks = 2;
-            HashSet<Task<string>> tasks = new HashSet<Task<string>>();
+            int freeTasks = 3;
+            Dictionary<Task<string>, Dictionary<string, string>> tasks = new Dictionary<Task<string>, Dictionary<string, string>>();
+
+            DateTime nextVkExecute = DateTime.Now;
 
             for (int i = 0; tasks.Count > 0 || (i < users.Count && i <= maximumHandleUsers);) // REMOVE ME
             {
                 if (freeTasks > 0 && (i < users.Count && i <= maximumHandleUsers))
                 {
+                    var timeNow = DateTime.Now;
+                    if (timeNow < nextVkExecute)
+                    {
+                        System.Threading.Thread.Sleep(nextVkExecute - timeNow);
+                    }
+
                     string executeCode = BuildGetGroupsRequest(users.Skip(i).Take(25).Select(user => user.User.Id), getMethod, MaxConsiderGroups, ", extended: 1");
 
-                    var newTask = ExecuteVkApiMethodAsync("execute", new Dictionary<string, string>() { { "code", executeCode } }, vkApi.AccessToken);
-
-                    tasks.Add(newTask);
+                    var parameters = new Dictionary<string, string> { { "code", executeCode } };
+                    var newTask = ExecuteVkApiMethodAsync("execute", parameters, vkApi.AccessToken);
+                    
+                    tasks.Add(newTask, parameters);
                     freeTasks--;
+
+                    nextVkExecute = DateTime.Now + TimeSpan.FromMilliseconds(334);
 
                     i += 25;
                 }
                 else
                 {
-                    var completedTask = Task.WhenAny(tasks.ToArray()).Result;
+                    var completedTask = Task.WhenAny(tasks.Keys).Result;
 
+                    var taskParameters = tasks[completedTask];
                     tasks.Remove(completedTask);
                     freeTasks++;
 
                     string vkApiResponse = completedTask.Result;
-                    var response = JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetSubExecuteUser[]>>(vkApiResponse).response;
 
-                    foreach (var group in response)
+                    bool responseError = false;
+
+                    try
                     {
-                        considerUsers[group.userId].Subscriptions = group.groups.items.Select(sub => sub.id).ToList();
+                        using (var sr = new StringReader(vkApiResponse))
+                        using (var jr = new JsonTextReader(sr))
+                        {
+                            jr.Read(); // {, or [
+                            jr.Read(); // error{field}, or element
+
+                            if (jr.TokenType == JsonToken.PropertyName && jr.Value.ToString() == "error")
+                            {
+                                responseError = true;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        responseError = true;
                     }
 
-                    // REMOVE ME
-                    Console.WriteLine($"Done(Subs) {i * 100.0 / (double)users.Count}% ({i}/{users.Count})");
+                    if (responseError)
+                    {
+                        var newTask = ExecuteVkApiMethodAsync("execute", taskParameters, vkApi.AccessToken);
+
+                        tasks.Add(newTask, taskParameters);
+                        freeTasks--;
+
+                        nextVkExecute = DateTime.Now + TimeSpan.FromMilliseconds(334);
+                    }
+                    else
+                    {
+                        var response =
+                            JsonConvert.DeserializeObject<VkApiExecuteResponse<VkApiGetSubExecuteUser[]>>(vkApiResponse)
+                                .response;
+
+                        foreach (var group in response)
+                        {
+                            considerUsers[group.userId].Subscriptions =
+                                group.groups.items.Select(sub => sub.id).ToList();
+                        }
+
+                        // REMOVE ME
+                        Console.WriteLine($"Done(Subs) {i*100.0/(double) users.Count}% ({i}/{users.Count})");
+                    }
                 }
             }
         }
@@ -506,7 +559,23 @@ namespace VKMatcher.Core
 
             matchedUsers = FillAndSortUsersBySubscription(matchedUsers);
 
-            var resultUsers = matchedUsers.Take(20).Select(u => new { Likely = u.Likely, UserId = u.User.User.Id, Groups = u.MatchedGroups, Photo = u.User.User.Photo100 });
+            var topUsers = matchedUsers.Take(20);
+
+            foreach (var userInfo in vkApi.Users.Get(topUsers.Select(u => u.User.User.Id).ToArray(), ProfileFields.Photo100 | ProfileFields.Domain))
+            {
+                var user = topUsers.First(u => u.User.User.Id == userInfo.Id);
+                user.User.User = userInfo;
+            }
+
+            //var resultUsers = topUsers.Select(u => new { Likely = u.Likely, UserId = u.User.User.Id, Groups = u.MatchedGroups, Photo = u.User.User.Photo100, Name = u.User.User. });
+            var resultUsers = topUsers.Select(
+                u =>
+                {
+                    var vkUser = u.User.User;
+
+                    return new MatchingResponse(vkUser.Id, u.Likely, u.MatchedGroups, vkUser.FirstName,
+                        vkUser.LastName, vkUser.Photo100.AbsoluteUri, "https://vk.com/" + vkUser.Domain);
+                });
 
             return JsonConvert.SerializeObject(resultUsers);
         }
