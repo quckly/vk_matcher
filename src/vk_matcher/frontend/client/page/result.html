@@ -1,18 +1,13 @@
 ﻿<div ng-controller="ResultCtrl as result">
-    <div>
-        <table>
-            <tbody>
-                <tr ng-repeat="user in result.Result track by $index">
-                    <td><img src="{{user.Photo}}" /></td>
-                    <td>{{user.Name}}</td>
-                    <td>{{user.UserId}}</td>
-                    <!--<td>{{user.Groups}}</td>-->
-                    <td>{{user.Likely}}</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="result-content">
+        <div class="result-row" ng-repeat="user in result.Result">
+            <div class="left">
+                <a href="{{user.Domain}}"><img src="{{user.Photo}}" /></a>
+                <a href="{{user.Domain}}">{{user.FirstName + ' ' + user.LastName}}</a>
+            </div>
+            <div class="likely">{{user.Likely}}</div>
+        </div>
     </div>
 
-    <img src="{{result.Avatar}}" />
     <pre class="text-json">{{result.ResultJson}}</pre>
 </div>
